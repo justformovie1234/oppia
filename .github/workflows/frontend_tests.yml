@@ -28,6 +28,7 @@ jobs:
           else
             echo "::set-output name=num_runs_matrix::[1]"
           fi
+          echo ${{ steps.set-matrix.outputs.num_runs_matrix }}
           
   frontend:
     runs-on:  ${{ matrix.os }}
