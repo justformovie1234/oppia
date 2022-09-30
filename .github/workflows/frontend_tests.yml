@@ -10,11 +10,31 @@ on:
       - release-*
 
 jobs:
+  generate-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      num_runs_matrix: ${{ steps.set-matrix.outputs.num_runs_matrix }}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2
+        with:
+          node-version: '12.x'
+      - name: Generate matrix for merge into develop
+        if: ${{ failure() && github.event_name == 'push' && github.repository == 'oppia/oppia' && github.ref == 'refs/heads/develop'}}
+        id: set-matrix
+        run: |
+          echo "::set-output name=num_runs_matrix::[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50]"
+      - name: Generate matrix [1] for all other events
+        if: ${{ github.event_name == 'push' && github.repository != 'oppia/oppia' && github.ref != 'refs/heads/develop'}}
+        id: set-matrix
+        run: |
+          echo "::set-output name=num_runs_matrix::[1]"
   frontend:
     runs-on:  ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-22.04]
+        num_runs: ${{ fromJson(needs.generate-matrix.outputs.num_runs_matrix) }}
     steps:
       - uses: actions/checkout@v2
       - name: Describe filesystem
@@ -43,7 +63,7 @@ jobs:
       - uses: ./.github/actions/install-oppia-dependencies
       - name: Suppress ENOSPC error from chokidar file watcher. See https://stackoverflow.com/a/32600959.
         run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p
-      - name: Run frontend tests
+      - name: Run frontend tests ${{ matrix.num_runs }}
         run: PYTHONIOENCODING=utf-8 python -m scripts.run_frontend_tests --run_minified_tests --skip_install --check_coverage
       - name: Uploading fronted coverage reports as an artifact
         if: ${{ failure() }}
