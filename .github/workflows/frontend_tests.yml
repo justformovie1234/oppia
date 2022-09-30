@@ -11,18 +11,21 @@ on:
 
 jobs:
   generate-job-strategy-matrix:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     outputs:
       job-strategy-matrix: ${{ steps.generate.outputs.job-strategy-matrix }}
     steps:
       - id: generate
+        env:
+          standard-test-runs: 1
+          flakes-test-runs: 50
         run: |
           if ${{ github.event_name == 'push' && github.repository == 'gp201/oppia' && github.ref == 'refs/heads/develop'}}
           then
-            JOB_STRATEGY_MATRIX=$(node -e "let r=[]; for(let i = 1; i <= 50; i++) { r.push(i) }; console.log(JSON.stringify(r));")
+            JOB_STRATEGY_MATRIX=$(node -e "let r=[]; for(let i = 1; i <= ${{ env.flakes-test-runs }}; i++) { r.push(i) }; console.log(JSON.stringify(r));")
             echo "::set-output name=job-strategy-matrix::$JOB_STRATEGY_MATRIX"
           else
-            JOB_STRATEGY_MATRIX=$(node -e "let r=[]; for(let i = 1; i <= 2; i++) { r.push(i) }; console.log(JSON.stringify(r));")
+            JOB_STRATEGY_MATRIX=$(node -e "let r=[]; for(let i = 1; i <= ${{ env.standard-test-runs }}; i++) { r.push(i) }; console.log(JSON.stringify(r));")
             echo "::set-output name=job-strategy-matrix::$JOB_STRATEGY_MATRIX"
           fi          
   frontend:
@@ -66,8 +69,13 @@ jobs:
         if: ${{ failure() }}
         uses: actions/upload-artifact@v2
         with:
-          name: frontend-coverage
+          name: frontend-coverage-${{ matrix.num_runs }}
           path: /home/runner/work/oppia/karma_coverage_reports
+  report:
+    needs: frontend
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v2
       - name: Report failure if failed on oppia/oppia develop branch
         if: ${{ failure() && github.event_name == 'push' && github.repository == 'oppia/oppia' && github.ref == 'refs/heads/develop'}}
         uses: ./.github/actions/send-webhook-notification
