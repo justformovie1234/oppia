@@ -35,6 +35,7 @@ jobs:
       matrix:
         os: [ubuntu-22.04]
         num_runs: ${{ fromJson(needs.generate-job-strategy-matrix.outputs.job-strategy-matrix) }}
+      fail-fast: false
     steps:
       - uses: actions/checkout@v2
       - name: Describe filesystem
